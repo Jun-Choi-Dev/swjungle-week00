@@ -50,21 +50,32 @@ def login():
 # API를 여기 아래서부터 만들어주세요.
 
 
-# 관리자: 일련번호 검색, 유저 이름과 자전거 번호 확인
+# 관리자: 자전거번호 검색, 유저 아이디, 이름, 패널티점수 확인
 @app.route("/search", methods=["GET"])
 def search():
     bike_number = request.json.get("bike_number", None)
-    user = db.userdata.find_one({'bike_number': bike_number})
+    num = int(bike_number)
+    user = db.userdata.find_one({'bike_number': num})
     user_id = user["user_id"]
     name = user["name"]
     penalty_score = user["penalty_score"]
 
-
     return jsonify({"result": "success"})
 
 # 관리자: 추가벌점 부여
-
-
+@app.route("/penalty", methods=["POST"])
+def penalty():
+    bike_number = request.json.get("bike_number", None)
+    num = int(bike_number)
+    user = db.userdata.find_one({'bike_number': num})
+    penalty = user["penalty_score"]
+    new_penalty = int(penalty)
+    new_penalty = new_penalty + 1
+    print(new_penalty)
+    db.userdate.update_one({"bike_number" : num}, 
+                {'$set':{'penalty_score':new_penalty}})
+                
+    return jsonify({"result": "success"})
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=5000, debug=True)
