@@ -50,6 +50,21 @@ def login():
 # API를 여기 아래서부터 만들어주세요.
 
 
+# 관리자: 일련번호 검색, 유저 이름과 자전거 번호 확인
+@app.route("/search", methods=["GET"])
+def search():
+    bike_number = request.json.get("bike_number", None)
+    user = db.userdata.find_one({'bike_number': bike_number})
+    user_id = user["user_id"]
+    name = user["name"]
+    penalty_score = user["penalty_score"]
+
+
+    return jsonify({"result": "success"})
+
+# 관리자: 추가벌점 부여
+
+
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=5000, debug=True)
