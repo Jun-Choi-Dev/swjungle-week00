@@ -51,6 +51,7 @@ def login():
 
 
 # 관리자: 자전거번호 검색, 유저 아이디, 이름, 패널티점수 확인
+# 혹여 자전거번호가 문자형이면 숫자형으로 변환
 @app.route("/search", methods=["GET"])
 def search():
     bike_number = request.json.get("bike_number", None)
@@ -60,21 +61,22 @@ def search():
     name = user["name"]
     penalty_score = user["penalty_score"]
 
-    return jsonify({"result": "success"})
 
-# 관리자: 추가벌점 부여
+    return jsonify({"result": "success", 
+        "content": [user_id, name, penalty_score]})
+
+# 관리자: 벌점추가 부여 기초 구현 (+1점으로 해놓음)
+# 혹여 자전거번호가 문자형이면 숫자형으로 변환
 @app.route("/penalty", methods=["POST"])
 def penalty():
     bike_number = request.json.get("bike_number", None)
     num = int(bike_number)
     user = db.userdata.find_one({'bike_number': num})
     penalty = user["penalty_score"]
-    new_penalty = int(penalty)
-    new_penalty = new_penalty + 1
-    print(new_penalty)
+    new_penalty = int(penalty) + 1
     db.userdate.update_one({"bike_number" : num}, 
                 {'$set':{'penalty_score':new_penalty}})
-                
+
     return jsonify({"result": "success"})
 
 if __name__ == '__main__':
