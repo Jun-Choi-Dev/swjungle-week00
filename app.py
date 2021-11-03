@@ -9,6 +9,7 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import get_raw_jwt
 
+from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
 
 app = Flask(__name__)
@@ -39,10 +40,10 @@ def revoked_token_callback():
 @app.route("/register", methods=["POST"])
 def register():
     user_id = request.json.get("user_id")
-    password = request.json.get("password")
+    encrypted_password = generate_password_hash(request.json.get("password"), method='sha256')
     name = request.json.get("name")
 
-    db.userdata.insert_one({'user_id':user_id, 'password':password, 'name':name,
+    db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password, 'name':name,
     'bike_number' : None, 'penalty_score' : 0})
 
     return jsonify({"result": "success"})
@@ -56,7 +57,7 @@ def login():
     # userdata(db) 대조 로직 추가
     user = db.userdata.find_one({'user_id':user_id})
     if user != None:
-        if user['password'] == password:
+        if check_password_hash(user['password'], password):
             access_token = create_access_token(identity=user_id)
             return jsonify(access_token=access_token)
         else:
