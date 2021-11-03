@@ -6,6 +6,7 @@ from flask import url_for
 from flask import render_template
 from flask import make_response
 
+
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
@@ -104,13 +105,23 @@ def logout():
     return redirect(url_for('home'))
 
 
-# user
+# user 기본 GET
+@app.route("/user")
+def user():
+    user_id = get_jwt_identity()
+
+    user = db.userdata.find_one({'user_id': user_id}) # 사용자에 대한 데이터
+    bike_list = list(db.bikedata.find({}, {'_id':False})) # 바이크 리스트 만들어 숨겨놓기
+
+    return render_template("user.html", user = user, bikes = bike_list)
+
+
 # POST : 자전거 신규등록
 @app.route('/new_bike', methods=['POST'])
 def new_bike():
     # 1. 클라이언트로부터 데이터를 받기
-    user_id_receive = request.json.get('user_id')  # 클라이언트로부터 id 받는 부분
-    want_bike = int(request.json.get('want_bike'))
+    user_id_receive = request.form['user_id']  # 클라이언트로부터 id 받는 부분
+    want_bike = int(request.form['want_bike'])
 
     user = db.userdata.find_one({'user_id': user_id_receive}) 
     bike = db.bikedata.find_one({'bike_number': want_bike}) 
@@ -128,30 +139,11 @@ def new_bike():
 
     db.userdata.update({'user_id': user_id_receive}, 
     {'$set': {'rental': True, 'bike_number': want_bike}})
-    #db.userdata.update_one({'user_id': user_id_receive}, {'$set': {'rental': True}})
 
     db.bikedata.update({'bike_number': want_bike}, 
     {'$set': {'rental': True,'user_id': user_id_receive}})
-    #db.bikedata.update_one({'bike_number': want_bike}, {'$set': {'rental': True}})
 
     return jsonify({'result': 'success'})
-
-# POST : 로그아웃???
-
-# GET : 유저 화면(일련번호, 벌점 현황)
-
-# 유저화면 > 유저id받아서, 자전거번호 유무, 벌점현황
-# 자전거 소유하지 않으면 자전거번호에 문자열 "없음" 포함된 유저리스트 뿌림
-@app.route("/user", methods=["GET"])
-def user():
-    user_id = request.args.get("user_id")
-    user = db.userdata.find_one({'user_id': user_id})
-    bike_number = user["bike_number"]
-    penalty_score = user["penalty_score"]
-
-    return jsonify({"result": "success",
-        "content": [user_id, bike_number, penalty_score]})
-
 
 # 관리자: 자전거번호 받아서, 유저 아이디, 이름, 패널티점수 확인
 # 혹여 자전거번호가 문자형이면 숫자형으로 변환
@@ -171,25 +163,46 @@ def search():
         return jsonify({"result": "사용자에게 대여되지 않은 자전거입니다."})
 
     user_id = user["user_id"]
-    name = user["name"]
+    bike_number = user["bike_number"]
     penalty_score = user["penalty_score"]
-
+    # return render_template('admin.html', user_id= , name=, penalty=)
     return jsonify({"result": "success", 
-        "content": [user_id, name, penalty_score]})
+        "content": [user_id, bike_number, penalty_score]})
 
 # 관리자: 요청시 벌점추가 (+1점으로 해놓음)
 # 혹여 자전거번호가 문자형이면 숫자형으로 변환
 @app.route("/penalty", methods=["POST"])
 def penalty():
-    bike_number = request.json.get("bike_number", None)
+    bike_number = request.form["bike_number"]
     num = int(bike_number)
-    user = db.userdata.find_one({'bike_number': num})
-    penalty = user["penalty_score"]
+
+    user = db.userdata.find_one({'bike_number': num}, {'_id':False})
+    user_id = user['user_id']
+    penalty = user['penalty_score']
     new_penalty = int(penalty) + 1
+
+    result = [user_id, bike_number, new_penalty]
+
     db.userdata.update_one({"bike_number" : num}, 
         {'$set':{'penalty_score':new_penalty}})
 
-    return jsonify({"result": "success"})
+    return jsonify({"result": "success", "content": result})
+
+# 관리자: 요청시 벌점초기화 (0점으로 해놓음)
+@app.route("/initPenalty", methods=["POST"])
+def initPenalty():
+    bike_number = request.form["bike_number"]
+    num = int(bike_number)
+    user = db.userdata.find_one({'bike_number': num}, {'_id':False})
+    user_id = user['user_id']
+    penalty = user['penalty_score']
+    init_penalty = penalty*0
+    result = [user_id, bike_number, init_penalty]
+    
+    db.userdata.update_one({"bike_number" : num}, 
+        {'$set':{'penalty_score': 0 }})
+
+    return jsonify({"result": "success", "content": result})
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=5000, debug=True)

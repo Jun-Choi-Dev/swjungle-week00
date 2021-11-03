@@ -1,0 +1,181 @@
+<!Doctype html>
+<html lang="ko">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+        integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+    <!-- Bulma : is-warning 등 활용 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+
+    <!-- FAS(Font Awesome) 사용 : 아이콘 활용-->
+    <script src="https://use.fontawesome.com/releases/v5.2.0/js/all.js"></script>
+
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
+        integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+        crossorigin="anonymous"></script>
+
+    <!-- jQuery-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <title>KAIST 카이스트 자전거 등록/관리 시스템</title>
+
+    <style type="text/css">
+        .center {
+            text-align: center;
+        }
+
+        #user-box{
+            text-align: center;
+            width: 60%;
+            margin: 10px auto 0 auto;
+        }
+
+        #bike-box{
+            margin: 10px auto 0 auto;
+        }
+
+        .bike-list {
+            text-align: center;
+            width: 40%;
+            margin: 10px auto 0 auto;
+        }
+
+        #bike-card{
+            width: 60%;
+            margin: 10px auto 0 auto;
+        }
+
+        .star-name {
+            display: inline-block;
+        }
+
+        .star-name:hover {
+            text-decoration: underline;
+        }
+
+        .top {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+
+    <script>
+
+        // 숨겨놨던 바이크 선택 리스트를 보이게 하는 함수
+        function openListofBikes() {
+                // id 값 bike-box의 display 값이 none 이면(= 눈에 보이지 않으면)
+                if ($("#bike-box").css("display") == "none") {
+                    // bike-box를 편다.
+                    $("#bike-box").show();
+            }
+        }
+
+        // 자전거 등록 함수
+        // 버튼 누르면 클라이언트가 서버에 user_id, want_bike(bike_number)를 보냄. 
+        function newBike(user_id, want_bike) {
+            $.ajax({
+                type: "POST", 
+                url: "/new_bike", 
+                data: {'user_id': user_id, 'want_bike': want_bike},
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        alert('자전거를 대여받았습니다');
+                        // 변경된 정보를 반영하기 위해 새로고침합니다.
+                        window.location.reload()
+                    }
+                    else if(response["result"] == "warning : 이미 바이크를 빌렸습니다."){
+                        alert('이미 바이크를 빌렸습니다.')
+                    }
+                    else if(response["result"] == "warning : 이미 빌린 바이크입니다."){
+                        alert('이미 빌린 바이크입니다.')
+                    } 
+                    else{
+                        alert('서버 오류')
+                    }
+                }
+            })
+
+        }
+    </script>
+
+<body>
+    <section class='hero is-warning'>
+        <div class='hero-body'>
+            <div class='container center'>
+                <h1 class='title'>카이스트 자전거 등록/관리 시스템</h1>
+                <h2 class='subtitle'>TAIST</h2>
+            </div>
+        </div>
+    </section>
+
+    <div class='user-data' id='user-box'>
+        {% set user_id = user['user_id'] %}
+        {% set bike_number = user['bike_number'] %}
+        {% set penalty_score = user['penalty_score'] %}
+        {% set rental = user['rental'] %}
+
+        <div class='card'>
+            <div class="each-card">
+                <div class="card flex-row">
+                    <div class="card-body">
+                        <div class="card-content">
+                            <h3 class="card-title">ID : {{user_id}}</h3>
+                            <p class="subtitle is-6">등록된 자전거 번호 : {{bike_number}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class='card-footer'>
+                    <h4 class="card-footer-item has-text-info">벌점 : {{penalty_score}}
+                    </h4>
+                </div>
+            </div>
+        
+        <!-- 사용자가 아직 빌린 자전거가 없는 경우 -->
+        {% if rental == False %}
+            <div class='card-footer'>
+                <a href='#' onclick='openListofBikes()' class="card-footer-item has-text-info">대여 신청
+                </a>
+            </div>
+        {% endif %}
+        </div>  
+    </div>
+    <p>
+
+    </p>
+
+    <div class='bike-list' id='bike-box' style="display:none">
+        {% for bike in bikes %}
+            {% set bike_number = bike['bike_number'] %}
+
+            {% if bike['rental'] == True %}
+                {% set rental =  '대여 불가능' %}
+            {% else %}
+                {% set rental =  '대여 가능' %}
+            {% endif %}
+
+            <div class='card' id='bike-card'>
+                <div class="each-card"  id='bike-card-each'>
+                    <div class="card flex-row">
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p class="card-title h5">자전거 번호 : {{bike_number}}번</p>
+                                <p class="subtitle is-5">대여 여부 : {{rental}}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class='card-footer'>
+                        <a href='#' onclick='newBike("{{user_id}}", "{{bike_number}}")' class="card-footer-item has-text-info">대여
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</head>
