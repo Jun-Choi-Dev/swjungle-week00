@@ -53,7 +53,7 @@ def login():
 # 자전거 소유하지 않으면 자전거번호에 문자열 "없음" 포함된 유저리스트 뿌림
 @app.route("/user", methods=["GET"])
 def user():
-    user_id = request.json.get("user_id", None)
+    user_id = request.args.get("user_id")
     user = db.userdata.find_one({'user_id': user_id})
     bike_number = user["bike_number"]
     penalty_score = user["penalty_score"]
@@ -66,13 +66,22 @@ def user():
 # 혹여 자전거번호가 문자형이면 숫자형으로 변환
 @app.route("/search", methods=["GET"])
 def search():
-    bike_number = request.json.get("bike_number", None)
+    bike_number = request.args.get("bike_number")
+    if bike_number == None:
+        return jsonify({"result": "번호를 입력해주세요."})
+    
     num = int(bike_number)
+    bike_in_db = db.bikedata.find_one({'bike_number' : num})
+    if bike_in_db == None:
+        return jsonify({"result": "존재하지 않는 자전거입니다."})
+
     user = db.userdata.find_one({'bike_number': num})
+    if user == None:
+        return jsonify({"result": "사용자에게 대여되지 않은 자전거입니다."})
+
     user_id = user["user_id"]
     name = user["name"]
     penalty_score = user["penalty_score"]
-
 
     return jsonify({"result": "success", 
         "content": [user_id, name, penalty_score]})
@@ -86,7 +95,7 @@ def penalty():
     user = db.userdata.find_one({'bike_number': num})
     penalty = user["penalty_score"]
     new_penalty = int(penalty) + 1
-    db.userdate.update_one({"bike_number" : num}, 
+    db.userdata.update_one({"bike_number" : num}, 
         {'$set':{'penalty_score':new_penalty}})
 
     return jsonify({"result": "success"})
