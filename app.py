@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
+from flask_jwt_extended import get_raw_jwt
 
 from pymongo import MongoClient
 
@@ -16,7 +17,24 @@ client = MongoClient('localhost', 27017)
 db = client.week00
 
 app.config["JWT_SECRET_KEY"] = "week00_team_6"
+app.config['JWT_BLACKLIST_ENABLED'] = True
+app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
 jwt = JWTManager(app)
+
+@jwt.token_in_blacklist_loader
+def check_if_token_in_blacklist(decrypted_token):
+    found_jti = db.blacklist.find_one({'jti':decrypted_token['jti']})
+    if found_jti is None:
+        return False
+    else:
+        return True
+
+@jwt.revoked_token_loader
+def revoked_token_callback():
+    return jsonify({
+        'description': 'The token has been revoked,',
+        'error': 'token_revoked'
+    })
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -47,8 +65,14 @@ def login():
         return jsonify({'result': "warning : 회원가입이 필요합니다."})
 
 
-# API를 여기 아래서부터 만들어주세요.
+@app.route("/logout", methods=["POST"])
+@jwt_required
+def logout():
+    jti = get_raw_jwt()['jti']
+    db.blacklist.insert_one({'jti':jti})
+    return {'message': 'Successfully logged out.'}
 
+# API를 여기 아래서부터 만들어주세요.
 
 
 if __name__ == '__main__':
