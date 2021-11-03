@@ -1,12 +1,17 @@
 from flask import Flask
 from flask import jsonify
 from flask import request
+from flask import redirect
+from flask import url_for
+from flask import render_template
+from flask import make_response
 
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import get_raw_jwt
+from flask_jwt_extended import set_access_cookies
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
@@ -19,6 +24,7 @@ db = client.week00
 app.config["JWT_SECRET_KEY"] = "week00_team_6"
 app.config['JWT_BLACKLIST_ENABLED'] = True
 app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
+app.config['JWT_TOKEN_LOCATION'] = ['cookies']
 jwt = JWTManager(app)
 
 @jwt.token_in_blacklist_loader
@@ -36,6 +42,14 @@ def revoked_token_callback():
         'error': 'token_revoked'
     })
 
+@jwt.user_claims_loader
+def add_claims_to_access_token(identity):
+    user_id = request.form["user_id"]
+    user = db.userdata.find_one({'user_id':user_id})
+    return {
+        "authority": user['authority']
+    }
+
 @app.route("/register", methods=["POST"])
 def register():
     user_id = request.json.get("user_id")
@@ -43,26 +57,43 @@ def register():
     name = request.json.get("name")
 
     db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password, 'name':name,
-    'bike_number' : None, 'penalty_score' : 0, 'rental' : False})
+    'bike_number' : None, 'penalty_score' : 0, 'rental' : False, 'authority': 'normal'})
 
-    return jsonify({"result": "success"})
+    return redirect(url_for('home'))
+
+@app.route("/")
+def home():
+    return render_template('index.html')
 
 
 @app.route("/login", methods=["POST"])
 def login():
-    user_id = request.json.get("user_id", None)
-    password = request.json.get("password", None)
-
-    # userdata(db) 대조 로직 추가
+    user_id = request.form["user_id"]
+    password = request.form["password"]
     user = db.userdata.find_one({'user_id':user_id})
     if user != None:
         if check_password_hash(user['password'], password):
             access_token = create_access_token(identity=user_id)
-            return jsonify(access_token=access_token)
+            if user['authority'] == 'normal':
+                resp = make_response(redirect('userpage', 302))
+            else:
+                resp = make_response(redirect('adminpage', 302))            
+            set_access_cookies(resp, access_token)
+            return resp
         else:
             return jsonify({'result': "warning : 비밀번호가 맞지 않습니다."})
     else:
         return jsonify({'result': "warning : 회원가입이 필요합니다."})
+
+@app.route("/user", methods=["GET"])
+@jwt_required
+def userpage():
+    return render_template('user.html')
+
+@app.route("/admin", methods=["GET"])
+@jwt_required
+def adminpage():
+    return render_template('admin.html')
 
 
 @app.route("/logout", methods=["POST"])
@@ -70,7 +101,7 @@ def login():
 def logout():
     jti = get_raw_jwt()['jti']
     db.blacklist.insert_one({'jti':jti})
-    return {'message': 'Successfully logged out.'}
+    return redirect(url_for('home'))
 
 
 # user
