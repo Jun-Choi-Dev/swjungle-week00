@@ -42,7 +42,7 @@ def register():
     encrypted_password = generate_password_hash(request.json.get("password"), method='sha256')
     name = request.json.get("name")
 
-    db.userdata.insert_one({'user_id':user_id, 'password':password, 'name':name,
+    db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password, 'name':name,
     'bike_number' : None, 'penalty_score' : 0, 'rental' : False})
 
     return jsonify({"result": "success"})
