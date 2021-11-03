@@ -1,0 +1,168 @@
+<!Doctype html>
+<html lang="ko">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css"
+        integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+    <!-- Bulma : is-warning 등 활용 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+    <!-- FAS(Font Awesome) 사용 : 아이콘 활용-->
+    <script src="https://use.fontawesome.com/releases/v5.2.0/js/all.js"></script>
+    <!-- JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
+        integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+        crossorigin="anonymous"></script>
+    <!-- jQuery-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <title>타이틀</title>
+    <style type="text/css">
+        .center {
+            text-align: center;
+        }
+        .star-list {
+            width: 60%;
+            margin: 10px auto 0 auto;
+        }
+        .star-name {
+            display: inline-block;
+        }
+        .star-name:hover {
+            text-decoration: underline;
+        }
+        .top {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+        // 자전거 번호 검색
+        function searchingBike() {
+            searchingNum = $('#bike-input').val();
+            $.ajax({
+                type: "GET",
+                url: `/search?bike_number=${searchingNum}`,
+                data: {},
+                success: function (response) {
+                    if (response["result"] == "success") {
+                        let user = response['content'];
+                        let user_id = user[0];
+                        let bike_number = user[1];
+                        let penalty_score = user[2];
+                        $('#result-box').empty();
+                        makeResult(user_id, bike_number, penalty_score); 
+                    } else if (response["result"] == "번호를 입력해주세요.") {
+                        alert('번호를 입력해주세요.')                    
+                        window.location.reload();
+                    } else if (response["result"] == "존재하지 않는 자전거입니다.") {
+                        alert('존재하지 않는 자전거입니다.')                    
+                        window.location.reload();
+                    } else if (response["result"] == "사용자에게 대여되지 않은 자전거입니다."){
+                        alert('사용자에게 대여되지 않은 자전거입니다.')                    
+                        window.location.reload();                                             
+                    } else {
+                        alert('서버오류')                    
+                        window.location.reload();               
+                    }
+                }
+            })
+        }
+
+        // 자전거 유저 벌점 부여
+        function penaltyClick(bike_number) {
+            console.log(bike_number)
+            $.ajax({
+                type: "POST",
+                url: "/penalty",
+                data: {'bike_number':bike_number},
+                success: function (response) {
+                    if (response['result'] == 'success') {
+                        result = response['content']
+                        user_id = result[0]
+                        bike_number =result[1]
+                        new_penalty = result[2]
+                        $('#result-box').empty();
+                        
+                        makeResult(user_id, bike_number, new_penalty);  
+                    } else {
+                        alert('서버오류');
+                        window.location.reload();
+                    }
+                }
+            })
+        }
+
+        // 자전거 유저 벌점 초기화=0
+        function initPenalty(bike_number) {
+            console.log(bike_number)
+            $.ajax({
+                type: "POST",
+                url: "/initPenalty",
+                data: {'bike_number':bike_number},
+                success: function (response) {
+                    if (response['result'] == 'success') {
+                        result = response['content']
+                        user_id = result[0]
+                        bike_number =result[1]
+                        init_penalty = result[2]
+                        $('#result-box').empty();
+                        
+                        makeResult(user_id, bike_number, init_penalty);  
+                    } else {
+                        alert('서버오류');
+                        window.location.reload();
+                    }
+                }
+            })            
+        }
+
+        // 결과 보여주는 함수
+        function makeResult(user_id, bike_number, penalty_score) {
+            let html_temp=
+            `<p class="title">
+                “유저ID: ${user_id}, 
+                자전거번호: ${bike_number}, 벌점은 ${penalty_score} 입니다.”
+          </p>
+          <p class="subtitle">
+            (자전거는 1번부터 10번까지 있습니다.)
+          </p>
+        <footer class="card-footer">
+          <p class="card-footer-item">
+            <span>
+                <button onclick="penaltyClick(${bike_number})">벌점부여</button>
+            </span>
+          </p>
+          <p class="card-footer-item">
+            <span>
+                <button onclick="initPenalty(${bike_number})">벌점 초기화</a>
+            </span>
+          </p>
+        </footer>`            
+            $('#result-box').append(html_temp)
+    }   
+    </script>
+<body>
+    <div class="field has-addons">
+        <div class="control">
+          <input id="bike-input" class="input" type="text" placeholder="자전거번호">
+        </div>
+        <div class="control">
+          <button onclick="searchingBike()" class="button is-info">
+            검색
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="result-box" class="card-content">
+          <p class="title">
+            “자전거 번호를 검색해주세요.”
+          </p>
+          <p class="subtitle">
+            (자전거는 1번부터 10번까지 있습니다.)
+          </p>
+        </div>
+      </div>
+</body>
+</head>
