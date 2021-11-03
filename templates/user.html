@@ -32,7 +32,7 @@
 
         #user-box{
             text-align: center;
-            width: 60%;
+            width: 30%;
             margin: 10px auto 0 auto;
         }
 
@@ -51,17 +51,8 @@
             margin: 10px auto 0 auto;
         }
 
-        .star-name {
-            display: inline-block;
-        }
-
-        .star-name:hover {
-            text-decoration: underline;
-        }
-
-        .top {
-            margin-top: 20px;
-            margin-bottom: 20px;
+        .hero-body{
+            top : 30px;
         }
     </style>
 
@@ -102,10 +93,31 @@
             })
 
         }
+
+        function logout() {
+            $.ajax({
+                type: "POST", 
+                url: "/logout", 
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function (response) {
+                    window.location.replace('/')
+                }
+            })
+
+        }
     </script>
 
 <body>
     <section class='hero is-warning'>
+        <div class = 'logout-btn'>
+                <p class="control">
+                  <button class="button" style = 'float : right' onclick="logout()">
+                    로그아웃
+                  </button>
+                </p>
+        </div>
         <div class='hero-body'>
             <div class='container center'>
                 <h1 class='title'>카이스트 자전거 등록/관리 시스템</h1>
@@ -116,7 +128,13 @@
 
     <div class='user-data' id='user-box'>
         {% set user_id = user['user_id'] %}
-        {% set bike_number = user['bike_number'] %}
+        
+        {%if user['bike_number'] == None %}
+            {% set bike_number = '등록된 자전거가 없습니다.' %}   
+        {% else %} 
+            {% set bike_number = user['bike_number'] %}        
+        {% endif %}
+        
         {% set penalty_score = user['penalty_score'] %}
         {% set rental = user['rental'] %}
 
@@ -124,14 +142,15 @@
             <div class="each-card">
                 <div class="card flex-row">
                     <div class="card-body">
+                        <p class="main is-size-3">사용자 정보 조회</p>
                         <div class="card-content">
-                            <h3 class="card-title">ID : {{user_id}}</h3>
-                            <p class="subtitle is-6">등록된 자전거 번호 : {{bike_number}}</p>
+                            <h3 class="card-title is-size-5">ID : {{user_id}}</h3>
+                            <p class="subtitle is-size-5">등록된 자전거 번호 : {{bike_number}}</p>
                         </div>
                     </div>
                 </div>
                 <div class='card-footer'>
-                    <h4 class="card-footer-item has-text-info">벌점 : {{penalty_score}}
+                    <h4 class="card-footer-item has-text-danger is-size-5">벌점 : {{penalty_score}}
                     </h4>
                 </div>
             </div>
@@ -139,7 +158,7 @@
         <!-- 사용자가 아직 빌린 자전거가 없는 경우 -->
         {% if rental == False %}
             <div class='card-footer'>
-                <a href='#' onclick='openListofBikes()' class="card-footer-item has-text-info">대여 신청
+                <a href='#' onclick='openListofBikes()' class="card-footer-item has-text-info is-size-5">대여 신청
                 </a>
             </div>
         {% endif %}
@@ -170,7 +189,7 @@
                         </div>
                     </div>
                     <div class='card-footer'>
-                        <a href='#' onclick='newBike("{{user_id}}", "{{bike_number}}")' class="card-footer-item has-text-info">대여
+                        <a href='#' onclick='newBike("{{user_id}}", "{{bike_number}}")' class="card-footer-item has-text-info is-size-5">대여
                         </a>
                     </div>
                 </div>

@@ -13,6 +13,8 @@ from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask_jwt_extended import get_raw_jwt
 from flask_jwt_extended import set_access_cookies
+from flask_jwt_extended import get_jwt_claims
+from flask_jwt_extended.utils import unset_jwt_cookies
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from pymongo import MongoClient
@@ -26,6 +28,7 @@ app.config["JWT_SECRET_KEY"] = "week00_team_6"
 app.config['JWT_BLACKLIST_ENABLED'] = True
 app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
 app.config['JWT_TOKEN_LOCATION'] = ['cookies']
+app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 jwt = JWTManager(app)
 
 @jwt.token_in_blacklist_loader
@@ -47,17 +50,18 @@ def revoked_token_callback():
 def add_claims_to_access_token(identity):
     user_id = request.form["user_id"]
     user = db.userdata.find_one({'user_id':user_id})
+    print(get_raw_jwt())
     return {
-        "authority": user['authority']
+        "authority": user['authority'],
+        "user_id": user_id,
     }
 
 @app.route("/register", methods=["POST"])
 def register():
-    user_id = request.json.get("user_id")
-    encrypted_password = generate_password_hash(request.json.get("password"), method='sha256')
-    name = request.json.get("name")
+    user_id = request.form["user_id"]
+    encrypted_password = generate_password_hash(request.form["password"], method='sha256')
 
-    db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password, 'name':name,
+    db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password,
     'bike_number' : None, 'penalty_score' : 0, 'rental' : False, 'authority': 'normal'})
 
     return redirect(url_for('home'))
@@ -66,6 +70,10 @@ def register():
 def home():
     return render_template('index.html')
 
+
+@app.route("/sign_up_view")
+def signupview():
+    return render_template('signup.html')
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -76,9 +84,9 @@ def login():
         if check_password_hash(user['password'], password):
             access_token = create_access_token(identity=user_id)
             if user['authority'] == 'normal':
-                resp = make_response(redirect('userpage', 302))
+                resp = make_response(redirect('user', 302))
             else:
-                resp = make_response(redirect('adminpage', 302))            
+                resp = make_response(redirect('admin', 302))            
             set_access_cookies(resp, access_token)
             return resp
         else:
@@ -86,29 +94,25 @@ def login():
     else:
         return jsonify({'result': "warning : 회원가입이 필요합니다."})
 
-@app.route("/user", methods=["GET"])
 @jwt_required
-def userpage():
-    return render_template('user.html')
-
-@app.route("/admin", methods=["GET"])
-@jwt_required
-def adminpage():
-    return render_template('admin.html')
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
 
 
 @app.route("/logout", methods=["POST"])
 @jwt_required
 def logout():
-    jti = get_raw_jwt()['jti']
-    db.blacklist.insert_one({'jti':jti})
-    return redirect(url_for('home'))
+    resp = jsonify({'logout':True})
+    unset_jwt_cookies(resp)
+    return resp
 
 
 # user 기본 GET
 @app.route("/user")
+@jwt_required
 def user():
-    user_id = get_jwt_identity()
+    user_id = get_jwt_claims()["user_id"]
 
     user = db.userdata.find_one({'user_id': user_id}) # 사용자에 대한 데이터
     bike_list = list(db.bikedata.find({}, {'_id':False})) # 바이크 리스트 만들어 숨겨놓기

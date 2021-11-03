@@ -22,20 +22,20 @@
         .center {
             text-align: center;
         }
-        .star-list {
-            width: 60%;
-            margin: 10px auto 0 auto;
+        
+        .wrap{
+          width: 40%;
+          margin: 10px auto 0 auto;
+          border : thin solid black ;
+          border-radius : 10px;
+          padding-top : 50px;
+          padding-bottom : 25px;
+          padding-left : 50px;
+          padding-right : 50px;
+
+          text-align: center
         }
-        .star-name {
-            display: inline-block;
-        }
-        .star-name:hover {
-            text-decoration: underline;
-        }
-        .top {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
+
     </style>
     <script>
         // 자전거 번호 검색
@@ -121,48 +121,87 @@
         // 결과 보여주는 함수
         function makeResult(user_id, bike_number, penalty_score) {
             let html_temp=
-            `<p class="title">
-                “유저ID: ${user_id}, 
-                자전거번호: ${bike_number}, 벌점은 ${penalty_score} 입니다.”
-          </p>
-          <p class="subtitle">
-            (자전거는 1번부터 10번까지 있습니다.)
-          </p>
-        <footer class="card-footer">
-          <p class="card-footer-item">
-            <span>
-                <button onclick="penaltyClick(${bike_number})">벌점부여</button>
-            </span>
-          </p>
-          <p class="card-footer-item">
-            <span>
-                <button onclick="initPenalty(${bike_number})">벌점 초기화</a>
-            </span>
-          </p>
-        </footer>`            
+                `<h5 class="title is-size-5">
+                    <사용자 정보 조회>
+                </h5>
+                <h5 class="title is-size-5">
+                    ID : ${user_id} 
+                </h5>
+                <h5 class="title is-size-5">
+                    대여 자전거 번호 : ${bike_number}
+                </h5>
+                <h5 class="title is-size-5 has-text-danger">
+                    현재 벌점 : ${penalty_score}
+                </h5>
+
+                <footer class="card-footer">
+                <p class="card-footer-item">
+                    <span>
+                        <a onclick="penaltyClick(${bike_number})">벌점부여</a>
+                    </span>
+                </p>
+                <p class="card-footer-item">
+                    <span>
+                        <a onclick="initPenalty(${bike_number})">벌점 초기화</a>
+                    </span>
+                </p>
+                </footer>`            
             $('#result-box').append(html_temp)
-    }   
+    }
+    
+    function logout() {
+            $.ajax({
+                type: "POST", 
+                url: "/logout", 
+                xhrFields: {
+                    withCredentials: true
+                },
+                success: function (response) {
+                    window.location.replace('/')
+                }
+            })
+
+        }
     </script>
 <body>
-    <div class="field has-addons">
-        <div class="control">
-          <input id="bike-input" class="input" type="text" placeholder="자전거번호">
-        </div>
-        <div class="control">
-          <button onclick="searchingBike()" class="button is-info">
-            검색
-          </button>
-        </div>
-      </div>
-      <div class="card">
-        <div id="result-box" class="card-content">
-          <p class="title">
-            “자전거 번호를 검색해주세요.”
+    <section class='hero is-warning'>
+        <p class="control">
+            <button class="button" style = 'float : right' onclick="logout()">
+              로그아웃
+            </button>
           </p>
-          <p class="subtitle">
-            (자전거는 1번부터 10번까지 있습니다.)
-          </p>
+        <div class='hero-body'>
+            <div class='container center'>
+                <div class = 'logout-btn'>
+                </div>
+                <h1 class='title'>카이스트 자전거 등록/관리 시스템</h1>
+                <h2 class='subtitle'>TAIST</h2>
+            </div>
         </div>
-      </div>
+    </section>
+    <div class='wrap'>
+        <div class="card" style='margin-bottom : 10px' id='result'>
+            <div id="result-box" class="card-content">
+                <p class="title is-size-4">
+                    자전거 번호를 검색해주세요.
+                </p>
+                <p class="subtitle is-size-5">
+                    (자전거는 1번부터 10번까지 있습니다.)
+                </p>
+            </div>
+        </div>
+        <div class="field has-addons">
+            <div class="control-input" style='width:90%; margin-right:5px'>
+                <input id="bike-input" class="input" type="text" placeholder="자전거번호">
+            </div>
+            <div class="control-btn">
+                <button onclick="searchingBike()" class="button is-info">
+                    검색
+                </button>
+            </div>
+        </div>
+        
+    </div>
+    
 </body>
 </head>
