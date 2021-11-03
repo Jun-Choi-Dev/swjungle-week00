@@ -1,4 +1,3 @@
-from os import name
 from flask import Flask
 from flask import jsonify
 from flask import request
@@ -43,8 +42,8 @@ def register():
     encrypted_password = generate_password_hash(request.json.get("password"), method='sha256')
     name = request.json.get("name")
 
-    db.userdata.insert_one({'user_id':user_id, 'password':encrypted_password, 'name':name,
-    'bike_number' : None, 'penalty_score' : 0})
+    db.userdata.insert_one({'user_id':user_id, 'password':password, 'name':name,
+    'bike_number' : None, 'penalty_score' : 0, 'rental' : False})
 
     return jsonify({"result": "success"})
 
@@ -73,7 +72,43 @@ def logout():
     db.blacklist.insert_one({'jti':jti})
     return {'message': 'Successfully logged out.'}
 
-# API를 여기 아래서부터 만들어주세요.
+
+# user
+# POST : 자전거 신규등록
+@app.route('/new_bike', methods=['POST'])
+def new_bike():
+    # 1. 클라이언트로부터 데이터를 받기
+    user_id_receive = request.json.get('user_id')  # 클라이언트로부터 id 받는 부분
+    want_bike = int(request.json.get('want_bike'))
+
+    user = db.userdata.find_one({'user_id': user_id_receive}) 
+    bike = db.bikedata.find_one({'bike_number': want_bike}) 
+
+    print(user['rental'])
+    print(bike['rental'])
+
+    # id : 유저의 바이크 대여 여부 확인
+    if user['rental'] is True:
+        return jsonify({'result': 'warning : 이미 바이크를 빌렸습니다.'})
+
+    # bike의 대여 여부 확인
+    if bike['rental'] is True:
+        return jsonify({'result': 'warning : 이미 빌린 바이크입니다.'})
+
+    db.userdata.update({'user_id': user_id_receive}, 
+    {'$set': {'rental': True, 'bike_number': want_bike}})
+    #db.userdata.update_one({'user_id': user_id_receive}, {'$set': {'rental': True}})
+
+    db.bikedata.update({'bike_number': want_bike}, 
+    {'$set': {'rental': True,'user_id': user_id_receive}})
+    #db.bikedata.update_one({'bike_number': want_bike}, {'$set': {'rental': True}})
+
+    return jsonify({'result': 'success'})
+
+# POST : 로그아웃???
+
+# GET : 유저 화면(일련번호, 벌점 현황)
+
 
 
 if __name__ == '__main__':
