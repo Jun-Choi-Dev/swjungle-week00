@@ -84,13 +84,13 @@ def login():
         if check_password_hash(user['password'], password):
             access_token = create_access_token(identity=user_id)
             if user['authority'] == 'normal':
-                resp = make_response(redirect('user', 302))
+                resp = jsonify({'result': 'user'})
             else:
-                resp = make_response(redirect('admin', 302))            
+                resp = jsonify({'result': 'admin'})            
             set_access_cookies(resp, access_token)
             return resp
         else:
-            return jsonify({'result': "warning : 비밀번호가 맞지 않습니다."})
+            return jsonify({'result': "wrong pw"})
     else:
         return jsonify({'result': "warning : 회원가입이 필요합니다."})
 
